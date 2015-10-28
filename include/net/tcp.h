@@ -185,6 +185,7 @@ void tcp_time_wait(struct sock *sk, int state, int timeo);
  * experimental options. See draft-ietf-tcpm-experimental-options-00.txt
  */
 #define TCPOPT_FASTOPEN_MAGIC	0xF989
+#define TCPOPT_ACCECN_MAGIC	0xACCE
 
 /*
  *     TCP option lengths
@@ -197,6 +198,8 @@ void tcp_time_wait(struct sock *sk, int state, int timeo);
 #define TCPOLEN_MD5SIG         18
 #define TCPOLEN_FASTOPEN_BASE  2
 #define TCPOLEN_EXP_FASTOPEN_BASE  4
+#define TCPOLEN_ACCECN         11
+#define TCPOLEN_EXP_ACCECN     13
 
 /* But this is what stacks really send out. */
 #define TCPOLEN_TSTAMP_ALIGNED		12
@@ -207,6 +210,8 @@ void tcp_time_wait(struct sock *sk, int state, int timeo);
 #define TCPOLEN_SACK_PERBLOCK		8
 #define TCPOLEN_MD5SIG_ALIGNED		20
 #define TCPOLEN_MSS_ALIGNED		4
+#define TCPOLEN_ACCECN_ALIGNED      12
+#define TCPOLEN_EXP_ACCECN_ALIGNED  16
 
 /* Flags in tp->nonagle */
 #define TCP_NAGLE_OFF		1	/* Nagle's algo is disabled */
@@ -391,10 +396,16 @@ static inline void tcp_dec_quickack_mode(struct sock *sk,
 	}
 }
 
-#define	TCP_ECN_OK		1
-#define	TCP_ECN_QUEUE_CWR	2
-#define	TCP_ECN_DEMAND_CWR	4
-#define	TCP_ECN_SEEN		8
+#define	TCP_ECN_OK			0x01
+#define	TCP_ECN_QUEUE_CWR	0x02
+#define	TCP_ECN_DEMAND_CWR	0x04 /*reused by AccECN to demand option */
+#define	TCP_ECN_SEEN		0x08
+
+#define	TCP_ACCECN_OK		0x10
+#define	TCP_ACCECN_CE       0x20
+#define	TCP_ACCECN_ECT0     0x40
+#define TCP_ACCECN_ECT1     0x80
+#define TCP_ACCECN_OPT      0x100
 
 enum tcp_tw_status {
 	TCP_TW_SUCCESS = 0,
@@ -719,6 +730,8 @@ static inline u32 tcp_skb_timestamp(const struct sk_buff *skb)
 
 #define TCPHDR_SYN_ECN	(TCPHDR_SYN | TCPHDR_ECE | TCPHDR_CWR)
 
+#define TCPHDR_NS  0x01
+
 /* This is what the send packet queuing engine uses to pass
  * TCP per-packet control information to the transmission code.
  * We also store the host-order sequence numbers in here too.
@@ -742,6 +755,7 @@ struct tcp_skb_cb {
 		};
 	};
 	__u8		tcp_flags;	/* TCP header flags. (tcp[13])	*/
+	__u8		tcp_flags2;	/* TCP header flags. (tcp[12])	*/
 
 	__u8		sacked;		/* State flags for SACK/FACK.	*/
 #define TCPCB_SACKED_ACKED	0x01	/* SKB ACK'd by a SACK block	*/
