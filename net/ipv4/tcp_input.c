@@ -231,8 +231,8 @@ static void __tcp_ecn_check_ce(struct tcp_sock *tp, const struct sk_buff *skb, u
 
 	switch (TCP_SKB_CB(skb)->ip_dsfield & INET_ECN_MASK) {
 	case INET_ECN_NOT_ECT:
-		if (!(tp->ecn_flags & TCP_ACCECN_CE) && !(tp->ecn_flags & TCP_ACCECN_CE) &&
-				!(tp->ecn_flags & TCP_ACCECN_CE)) {
+		if ((tp->ecn_flags & TCP_ACCECN_ECT0) || (tp->ecn_flags & TCP_ACCECN_ECT1) ||
+				(tp->ecn_flags & TCP_ACCECN_CE)) {
 			tp->ecn_flags |= TCP_ACCECN_OPT;
 			tp->ecn_flags &= ~TCP_ACCECN_ECT0 & ~TCP_ACCECN_ECT1 & ~TCP_ACCECN_CE;
 		}
@@ -5070,7 +5070,9 @@ static void __tcp_ack_snd_check(struct sock *sk, int ofo_possible)
 	    /* We ACK each frame or... */
 	    tcp_in_quickack_mode(sk) ||
 	    /* We have out of order data. */
-	    (ofo_possible && skb_peek(&tp->out_of_order_queue))) {
+	    (ofo_possible && skb_peek(&tp->out_of_order_queue)) ||
+		/* Change-triggered ACK by ECN marking using AccECN */
+		(tp->ecn_flags & TCP_ACCECN_OPT)) {
 		/* Then ack it now */
 		tcp_send_ack(sk);
 	} else {

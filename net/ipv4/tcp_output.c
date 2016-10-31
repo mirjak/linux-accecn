@@ -375,6 +375,7 @@ static void tcp_ecn_clear_syn(struct sock *sk, struct sk_buff *skb)
 		 * SYN ACK is ultimatively being received.
 		 */
 		TCP_SKB_CB(skb)->tcp_flags &= ~(TCPHDR_ECE | TCPHDR_CWR);
+	    TCP_SKB_CB(skb)->tcp_flags2 &= ~(TCPHDR_NS);
 }
 
 static void
@@ -455,12 +456,12 @@ static bool tcp_ecn_check_option(struct tcp_sock *tp, int tcp_header_len)
 		return false;
 
 	if (tp->ecn_flags & TCP_ACCECN_OK) {
-//		if ( (tcp_time_stamp > (tp->accecn_opt_last_sent + (tp->srtt_us >> (ACCECN_BEACON_FREQ_SHIFT+3) ))) ||
-//				(tp->ecn_flags & TCP_ACCECN_OPT) ) {
-//			tp->accecn_opt_last_sent = tcp_time_stamp;
-//			tp->ecn_flags &= ~TCP_ACCECN_OPT;
+		if ( (tcp_time_stamp > (tp->accecn_opt_last_sent + (tp->srtt_us >> (ACCECN_BEACON_FREQ_SHIFT+13)))) ||
+				(tp->ecn_flags & TCP_ACCECN_OPT) ) {
+			printk(" time: %u, last: %u, diff: %u, srtt: %u\n", tcp_time_stamp, tp->accecn_opt_last_sent, ( tp->srtt_us >> (ACCECN_BEACON_FREQ_SHIFT+13) ), tp->srtt_us );
+			tp->ecn_flags &= ~TCP_ACCECN_OPT;
 			return true;
-//		}
+		}
 	}
 	return false;
 }
@@ -829,7 +830,9 @@ static unsigned int tcp_established_options(struct sock *sk, struct sk_buff *skb
 			opts->num_sack_blocks * TCPOLEN_SACK_PERBLOCK;
 	}
 
-	if (tcp_ecn_check_option(tp, MAX_TCP_OPTION_SPACE - size)) {
+	/* set AccECN option only on ACKs */
+	if (skb != NULL && (TCP_SKB_CB(skb)->tcp_flags & TCPHDR_ACK)
+		&& tcp_ecn_check_option(tp, MAX_TCP_OPTION_SPACE - size)) {
 		opts->options |= OPTION_EXP_ACCECN;
 		size += TCPOLEN_EXP_ACCECN_ALIGNED;
 	}

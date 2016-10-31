@@ -401,11 +401,11 @@ static inline void tcp_dec_quickack_mode(struct sock *sk,
 #define	TCP_ECN_DEMAND_CWR	0x04 /*reused by AccECN to demand option */
 #define	TCP_ECN_SEEN		0x08
 
-#define	TCP_ACCECN_OK		0x10
-#define	TCP_ACCECN_CE       0x20
-#define	TCP_ACCECN_ECT0     0x40
-#define TCP_ACCECN_ECT1     0x80
-#define TCP_ACCECN_OPT      0x100
+#define	TCP_ACCECN_OK		0x10 /*AccECN successfully negotiated with other end */
+#define	TCP_ACCECN_CE       0x20 /*Last packet was CE marked*/
+#define	TCP_ACCECN_ECT0     0x40 /*Last packet was ECT(0) marked*/
+#define TCP_ACCECN_ECT1     0x80 /*Last packet was ECT(1) marked*/
+#define TCP_ACCECN_OPT      0x100 /*Next ACK should carry AccECN option */
 
 enum tcp_tw_status {
 	TCP_TW_SUCCESS = 0,
