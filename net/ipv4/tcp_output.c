@@ -2742,6 +2742,10 @@ int __tcp_retransmit_skb(struct sock *sk, struct sk_buff *skb)
 	if ((TCP_SKB_CB(skb)->tcp_flags & TCPHDR_SYN_ECN) == TCPHDR_SYN_ECN)
 		tcp_ecn_clear_syn(sk, skb);
 
+	/* AccECN fallback for SYN ACK */
+	if ((TCP_SKB_CB(skb)->tcp_flags & TCPHDR_SYNACK_ACCECN) == TCPHDR_SYNACK_ACCECN)
+		tcp_ecn_clear_syn(sk, skb);
+
 	tcp_retrans_try_collapse(sk, skb, cur_mss);
 
 	/* Make a copy, if the first transmission SKB clone we made

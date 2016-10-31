@@ -729,6 +729,7 @@ static inline u32 tcp_skb_timestamp(const struct sk_buff *skb)
 #define TCPHDR_CWR 0x80
 
 #define TCPHDR_SYN_ECN	(TCPHDR_SYN | TCPHDR_ECE | TCPHDR_CWR)
+#define TCPHDR_SYNACK_ACCECN	(TCPHDR_SYN | TCPHDR_ACK | TCPHDR_CWR)
 
 #define TCPHDR_NS  0x01
 
