@@ -28,30 +28,33 @@ static bool rnd_inited __read_mostly;
 
 static unsigned int xt_rateest_hash(const char *name)
 {
-	return jhash(name, FIELD_SIZEOF(struct xt_rateest, name), jhash_rnd) &
-	       (RATEEST_HSIZE - 1);
-}
+	const struct xt_rateest_match_info *info = par->matchinfo;
+	struct gnet_stats_rate_est64 sample = {0};
+	u_int32_t bps1, bps2, pps1, pps2;
+	bool ret = true;
 
-static void xt_rateest_hash_insert(struct xt_rateest *est)
-{
-	unsigned int h;
+	gen_estimator_read(&info->est1->rate_est, &sample);
 
-	h = xt_rateest_hash(est->name);
-	hlist_add_head(&est->list, &rateest_hash[h]);
-}
+	if (info->flags & XT_RATEEST_MATCH_DELTA) {
+		bps1 = info->bps1 >= sample.bps ? info->bps1 - sample.bps : 0;
+		pps1 = info->pps1 >= sample.pps ? info->pps1 - sample.pps : 0;
+	} else {
+		bps1 = sample.bps;
+		pps1 = sample.pps;
+	}
 
-struct xt_rateest *xt_rateest_lookup(const char *name)
-{
-	struct xt_rateest *est;
-	unsigned int h;
+	if (info->flags & XT_RATEEST_MATCH_ABS) {
+		bps2 = info->bps2;
+		pps2 = info->pps2;
+	} else {
+		gen_estimator_read(&info->est2->rate_est, &sample);
 
-	h = xt_rateest_hash(name);
-	mutex_lock(&xt_rateest_mutex);
-	hlist_for_each_entry(est, &rateest_hash[h], list) {
-		if (strcmp(est->name, name) == 0) {
-			est->refcnt++;
-			mutex_unlock(&xt_rateest_mutex);
-			return est;
+		if (info->flags & XT_RATEEST_MATCH_DELTA) {
+			bps2 = info->bps2 >= sample.bps ? info->bps2 - sample.bps : 0;
+			pps2 = info->pps2 >= sample.pps ? info->pps2 - sample.pps : 0;
+		} else {
+			bps2 = sample.bps;
+			pps2 = sample.pps;
 		}
 	}
 	mutex_unlock(&xt_rateest_mutex);
@@ -162,10 +165,11 @@ static struct xt_target xt_rateest_tg_reg __read_mostly = {
 	.name       = "RATEEST",
 	.revision   = 0,
 	.family     = NFPROTO_UNSPEC,
-	.target     = xt_rateest_tg,
-	.checkentry = xt_rateest_tg_checkentry,
-	.destroy    = xt_rateest_tg_destroy,
-	.targetsize = sizeof(struct xt_rateest_target_info),
+	.match      = xt_rateest_mt,
+	.checkentry = xt_rateest_mt_checkentry,
+	.destroy    = xt_rateest_mt_destroy,
+	.matchsize  = sizeof(struct xt_rateest_match_info),
+	.usersize   = offsetof(struct xt_rateest_match_info, est1),
 	.me         = THIS_MODULE,
 };
 

@@ -96,21 +96,14 @@ tos_tg(struct sk_buff *skb, const struct xt_action_param *par)
 static unsigned int
 tos_tg6(struct sk_buff *skb, const struct xt_action_param *par)
 {
-	const struct xt_tos_target_info *info = par->targinfo;
-	struct ipv6hdr *iph = ipv6_hdr(skb);
-	u_int8_t orig, nv;
+	const struct xt_tos_match_info *info = par->matchinfo;
 
-	orig = ipv6_get_dsfield(iph);
-	nv   = (orig & ~info->tos_mask) ^ info->tos_value;
-
-	if (orig != nv) {
-		if (!skb_make_writable(skb, sizeof(struct iphdr)))
-			return NF_DROP;
-		iph = ipv6_hdr(skb);
-		ipv6_change_dsfield(iph, 0, nv);
-	}
-
-	return XT_CONTINUE;
+	if (xt_family(par) == NFPROTO_IPV4)
+		return ((ip_hdr(skb)->tos & info->tos_mask) ==
+		       info->tos_value) ^ !!info->invert;
+	else
+		return ((ipv6_get_dsfield(ipv6_hdr(skb)) & info->tos_mask) ==
+		       info->tos_value) ^ !!info->invert;
 }
 
 static struct xt_target dscp_tg_reg[] __read_mostly = {

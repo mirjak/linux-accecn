@@ -1261,7 +1261,7 @@ static umode_t ims_pcu_is_attr_visible(struct kobject *kobj,
 	return mode;
 }
 
-static struct attribute_group ims_pcu_attr_group = {
+static const struct attribute_group ims_pcu_attr_group = {
 	.is_visible	= ims_pcu_is_attr_visible,
 	.attrs		= ims_pcu_attrs,
 };
@@ -1480,7 +1480,7 @@ static struct attribute *ims_pcu_ofn_attrs[] = {
 	NULL
 };
 
-static struct attribute_group ims_pcu_ofn_attr_group = {
+static const struct attribute_group ims_pcu_ofn_attr_group = {
 	.name	= "ofn",
 	.attrs	= ims_pcu_ofn_attrs,
 };
@@ -1663,13 +1663,21 @@ static int ims_pcu_parse_cdc_data(struct usb_interface *intf, struct ims_pcu *pc
 
 	pcu->ctrl_intf = usb_ifnum_to_if(pcu->udev,
 					 union_desc->bMasterInterface0);
+	if (!pcu->ctrl_intf)
+		return -EINVAL;
 
 	alt = pcu->ctrl_intf->cur_altsetting;
+
+	if (alt->desc.bNumEndpoints < 1)
+		return -ENODEV;
+
 	pcu->ep_ctrl = &alt->endpoint[0].desc;
 	pcu->max_ctrl_size = usb_endpoint_maxp(pcu->ep_ctrl);
 
 	pcu->data_intf = usb_ifnum_to_if(pcu->udev,
 					 union_desc->bSlaveInterface0);
+	if (!pcu->data_intf)
+		return -EINVAL;
 
 	alt = pcu->data_intf->cur_altsetting;
 	if (alt->desc.bNumEndpoints != 2) {
